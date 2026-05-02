@@ -171,9 +171,13 @@ with st.sidebar:
     
     # API Key Input
     api_key_input = ""
-    if "OPENAI_API_KEY" in st.secrets:
-        api_key_input = st.secrets["OPENAI_API_KEY"]
-    else:
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            api_key_input = st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        pass
+        
+    if not api_key_input:
         api_key_input = st.text_input("OpenAI API Key (Öğrenme Modu İçin)", type="password", help="Dinamik soru açıklamaları için geçerli bir OpenAI API anahtarı giriniz. Eğer anahtarınız yoksa Sınav Modunu kullanabilirsiniz.")
     
     st.markdown("---")
@@ -255,7 +259,7 @@ with st.sidebar:
 
 # Main Area
 if not st.session_state.exam_started:
-    st.title("İSG Sınav Simülatörüne Hoşgeldiniz! 🚀")
+    st.title("İSG ÇIKMIŞ SINAV SORULARI A-B-C 2014-2020")
     st.write("Lütfen soldaki menüden çözmek istediğiniz sınav dönemi ve **sınıfını (A, B, C)** seçerek modunuzu belirleyip 'Sınava Başla' butonuna tıklayın.")
     st.write("Sınavlar ÖSYM tarafından sorulmuş orijinal çıkmış sorulardan oluşmaktadır.")
     
@@ -273,9 +277,9 @@ if not st.session_state.exam_started:
     st.markdown("### 💡 Modlar Hakkında")
     col1, col2 = st.columns(2)
     with col1:
-        st.info("**Gerçek Sınav Modu:** ÖSYM standartlarında, süreye karşı yarışırsınız. Doğru/Yanlış cevaplarınızı sınav bitiminde görürsünüz.")
+        st.info("**Gerçek Sınav Modu:** ÖSYM standartlarında, süreye karşı yarışırsınız. Soruyu cevapladığınız anda doğru cevabı görürsünüz ancak detaylı açıklama yapılmaz.")
     with col2:
-        st.success("**Öğrenme Modu:** Soruyu cevapladığınız anda doğru mu yanlış mı yaptığınızı görürsünüz. Üstelik OpenAI destekli Yapay Zeka, soruyu sizin için detaylıca açıklar!")
+        st.success("**Öğrenme Modu:** Soruyu cevapladığınız anda anında geri bildirim alır ve sorunun çözümüne yönelik detaylı açıklamayı görürsünüz.")
 
     st.markdown("---")
     st.markdown("### 👨‍💻 Geliştirici Notu")
@@ -316,8 +320,8 @@ elif st.session_state.exam_started and not st.session_state.exam_finished:
                     default_index = idx
                     break
         
-        # In learning mode, if already answered, disable the radio button
-        disabled_radio = st.session_state.learning_mode and current_ans is not None
+        # Once answered, disable the radio button in both modes
+        disabled_radio = current_ans is not None
         
         choice = st.radio("Cevabınız:", option_list, index=default_index, key=f"q_{st.session_state.current_q_index}", label_visibility="collapsed", disabled=disabled_radio)
         
@@ -328,7 +332,7 @@ elif st.session_state.exam_started and not st.session_state.exam_finished:
             
             # If in learning mode and just answered, immediately fetch explanation
             if st.session_state.learning_mode:
-                with st.spinner("Yapay Zeka cevabınızı analiz ediyor ve açıklama üretiyor..."):
+                with st.spinner("Cevabınız analiz ediliyor ve detaylı açıklama hazırlanıyor..."):
                     api_key = st.session_state.openai_api_key
                     explanation = generate_explanation(api_key, current_q, selected_letter, correct_ans)
                     st.session_state.explanations[st.session_state.current_q_index] = explanation
@@ -336,18 +340,19 @@ elif st.session_state.exam_started and not st.session_state.exam_finished:
             else:
                 pass # Normal mode just saves
 
-        # Display immediate feedback if in learning mode
-        if st.session_state.learning_mode and current_ans:
+        # Display immediate feedback in both modes
+        if current_ans:
             st.markdown("---")
             if current_ans == correct_ans:
-                st.success(f"✅ **Tebrikler, Doğru Cevap!** ({correct_ans})")
+                st.success(f"✅ **Doğru Cevap!** ({correct_ans})")
             else:
                 st.error(f"❌ **Yanlış Cevap.** Sizin cevabınız: **{current_ans}**, Doğru Cevap: **{correct_ans}**")
                 
-            explanation = st.session_state.explanations.get(st.session_state.current_q_index)
-            if explanation:
-                st.markdown("#### 📖 Çözüm Açıklaması")
-                st.markdown(f'<div class="explanation-box">{explanation}</div>', unsafe_allow_html=True)
+            if st.session_state.learning_mode:
+                explanation = st.session_state.explanations.get(st.session_state.current_q_index)
+                if explanation:
+                    st.markdown("#### 📖 Çözüm Açıklaması")
+                    st.markdown(f'<div class="explanation-box">{explanation}</div>', unsafe_allow_html=True)
                 
     else:
         st.info("Bu soru metin formatında çözülemiyor. Lütfen geçiniz.")

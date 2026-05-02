@@ -338,7 +338,7 @@ elif st.session_state.exam_started and not st.session_state.exam_finished:
                     st.session_state.explanations[st.session_state.current_q_index] = explanation
                 st.rerun()
             else:
-                pass # Normal mode just saves
+                st.rerun() # Normal mode just saves and refreshes UI to show feedback
 
         # Display immediate feedback in both modes
         if current_ans:
